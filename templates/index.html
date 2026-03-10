@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Summarizer & Classifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white transition-colors duration-300">
+
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-brand-500/10 blur-[100px] animate-pulse-slow"></div>
+        <div class="absolute bottom-[20%] -right-[10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px] animation-delay-2000"></div>
+    </div>
+
+    <main class="relative z-10 container mx-auto px-4 py-12 max-w-4xl flex-grow flex flex-col justify-center">
+        
+        <header class="text-center mb-10 relative animate-fade-in-up">
+            <div class="absolute right-0 top-0">
+                <a href="/history" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-300 backdrop-blur-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300">
+                    <i class="ph ph-clock-counter-clockwise"></i> View History
+                </a>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-purple-500">
+                Audio Summarizer
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                Upload your lectures, meetings, or voice notes. We'll transcribe, summarize, and categorize them using on-device AI.
+            </p>
+        </header>
+
+        <div id="upload-section" class="bg-white/80 dark:bg-gray-800/70 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl border border-gray-200 dark:border-gray-700/50 transition-all duration-500 animate-fade-in-up-delay-1 premium-card">
+            <div id="drop-zone" class="relative group border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-12 text-center cursor-pointer hover:border-brand-500 dark:hover:border-brand-500 transition-all duration-300 bg-gray-50/50 dark:bg-gray-900/30 hover:bg-brand-50/50 dark:hover:bg-brand-900/10">
+                
+                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept=".mp3,.wav,.m4a">
+                
+                <div class="flex flex-col items-center justify-center space-y-4 pointer-events-none group-hover:-translate-y-2 transition-transform duration-500 ease-out">
+                    <div class="w-20 h-20 rounded-full bg-brand-50 dark:bg-gray-800 flex items-center justify-center group-hover:bg-brand-100 dark:group-hover:bg-gray-700 transition-all duration-300 shadow-inner group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                        <i class="ph ph-cloud-arrow-up text-4xl text-brand-500 dark:text-brand-400 group-hover:scale-110 transition-transform duration-300"></i>
+                    </div>
+                    <div>
+                        <p class="text-xl font-medium mb-1">Drag and drop your audio file here</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Supports .mp3, .wav, .m4a (Max 50MB)</p>
+                    </div>
+                    <button class="mt-4 px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full font-medium shadow-md hover:bg-gray-800 dark:hover:bg-gray-100 transition-all active:scale-95 pointer-events-auto">
+                        Browse Files
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="processing-section" class="hidden flex-col items-center justify-center space-y-6 mt-12 py-12">
+            <div class="relative flex items-center justify-center w-24 h-24">
+                <div class="absolute inset-0 border-4 border-gray-200 dark:border-gray-700 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                <i class="ph ph-magic-wand text-3xl text-brand-500 animate-pulse"></i>
+            </div>
+            
+            <div class="text-center">
+                <h3 id="status-title" class="text-2xl font-semibold mb-2">Analyzing Audio...</h3>
+                <p id="status-desc" class="text-gray-500 dark:text-gray-400">This might take a minute relying on your hardware.</p>
+            </div>
+            
+            <div class="w-full max-w-sm mt-8 space-y-4">
+                <div class="flex items-center space-x-3 status-step" id="step-uploading">
+                    <div class="w-6 h-6 rounded-full border-2 border-brand-500 flex items-center justify-center bg-brand-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]"><i class="ph ph-check text-xs"></i></div>
+                    <span class="font-medium text-gray-900 dark:text-gray-100">Uploading File</span>
+                </div>
+                <div class="flex items-center space-x-3 status-step opacity-50" id="step-transcribing">
+                    <div class="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"></div>
+                    <span class="font-medium">Transcribing (Whisper)</span>
+                </div>
+                <div class="flex items-center space-x-3 status-step opacity-50" id="step-summarizing">
+                    <div class="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"></div>
+                    <span class="font-medium">Summarizing (BART)</span>
+                </div>
+                <div class="flex items-center space-x-3 status-step opacity-50" id="step-classifying">
+                    <div class="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center"></div>
+                    <span class="font-medium">Classifying Topics</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-section" class="hidden mt-8 space-y-6 opacity-0 translate-y-8 transition-all duration-700 ease-out">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="ph ph-sparkle text-yellow-500"></i> Results
+                </h2>
+                <button id="btn-new" class="text-sm font-medium px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    Upload Another
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="md:col-span-2 bg-white/70 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 text-brand-600 dark:text-brand-400 shrink-0">
+                        <i class="ph ph-text-align-left text-xl"></i> Executive Summary
+                    </h3>
+                    <div class="max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                        <p id="result-summary" class="text-gray-700 dark:text-gray-300 leading-relaxed text-lg"></p>
+                    </div>
+                </div>
+
+                <div class="bg-white/70 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                        <i class="ph ph-tag text-xl"></i> Topics
+                    </h3>
+                    <div id="result-topics" class="flex flex-wrap gap-2 mt-auto pb-2"></div>
+                </div>
+            </div>
+
+            <div class="bg-white/70 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700/50 overflow-hidden flex flex-col max-h-[400px]">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <i class="ph ph-quotes text-xl text-gray-500"></i> Full Transcript
+                    </h3>
+                    <button id="btn-copy" class="text-gray-500 hover:text-brand-500 transition-colors" title="Copy to clipboard">
+                        <i class="ph ph-copy text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto custom-scrollbar flex-grow">
+                    <p id="result-transcript" class="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap"></p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="relative z-10 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+        <p>Powered by FastAPI, local Whisper, and HuggingFace Transformers.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
